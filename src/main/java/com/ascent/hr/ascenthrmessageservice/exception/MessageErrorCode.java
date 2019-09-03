@@ -1,0 +1,16 @@
+package com.ascent.hr.ascenthrmessageservice.exception;
+
+/**
+ * @author gopal
+ * @since 1/9/19
+ */
+public interface MessageErrorCode {
+
+    Integer MESSAGE_QUEUE_NAME_EMPTY = 2000;
+    Integer MESSAGE_EXCHANGE_NAME_EMPTY = MESSAGE_QUEUE_NAME_EMPTY+1;
+    Integer MESSAGE_DETAILS_EMPTY = MESSAGE_QUEUE_NAME_EMPTY+2;
+    Integer MESSAGE_QUEUE_NOT_EXIST = MESSAGE_QUEUE_NAME_EMPTY+3;
+    Integer MESSAGE_ID_NOT_PROVIDED = MESSAGE_QUEUE_NAME_EMPTY+4;
+    Integer MESSAGE_NOT_PURGED = MESSAGE_QUEUE_NAME_EMPTY+5;
+    Integer MESSAGE_NOT_DELETED = MESSAGE_QUEUE_NAME_EMPTY+6;
+}

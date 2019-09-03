@@ -1,0 +1,39 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+                   http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="gopal" id="1">
+        <createTable tableName="message">
+            <column name="id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="VARCHAR(255)"/>
+            <column name="retry_attempts" type="INT"/>
+            <column name="delivery_status" type="INT"/>
+            <column name="body" type="BYTEA"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="gopal" id="2">
+        <createTable tableName="message_queue">
+            <column name="id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="size" type="INT"/>
+            <column name="exchange_name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="gopal" id="3">
+        <createTable tableName="message_queue_message_mapping">
+            <column name="message_queue_id" type="VARCHAR(64)"/>
+            <column name="message_id" type="VARCHAR(64)"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
