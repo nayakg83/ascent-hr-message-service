@@ -26,7 +26,6 @@
             </column>
             <column name="name" type="VARCHAR(255)"/>
             <column name="size" type="INT"/>
-            <column name="exchange_name" type="VARCHAR(255)"/>
         </createTable>
     </changeSet>
     <changeSet author="gopal" id="3">

@@ -55,7 +55,6 @@ public class MessageQueueTest {
         msg.setBody("test1".getBytes());
 
         messageQueue.getMessages().add(msg);
-        messageQueue.exchangeName("test");
         messageQueue.size();
 
         messageQueueRepository.save(messageQueue);

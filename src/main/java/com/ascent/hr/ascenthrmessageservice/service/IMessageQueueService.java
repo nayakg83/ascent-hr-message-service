@@ -11,19 +11,19 @@ import java.util.List;
  */
 public interface IMessageQueueService {
 
+    public MessageQueue createQueue(String queueName);
+
     public MessageQueue updateQueueName(MessageQueue messageQueue, String queueName);
 
     public boolean deleteQueue(MessageQueue messageQueue);
 
-    public MessageQueue enQueue(String queueName, String exchangeName, String message);
+    public MessageQueue getQueue(String queueName);
+
+    public MessageQueue enQueue(MessageQueue messageQueue, String message);
 
     public MessageQueue deQueue(MessageQueue messageQueue);
 
     public boolean purge(MessageQueue messageQueue);
 
     public Message peek(MessageQueue messageQueue, String messageId);
-
-    public List<MessageQueue> findAll();
-
-
 }

@@ -23,7 +23,10 @@ public class MessageUtil {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy hh:mm");
         return simpleDateFormat.format(Calendar.getInstance().getTime());
 
+    }
 
+    public static String getString(byte[] message){
+        return  new String(message);
     }
 
 }

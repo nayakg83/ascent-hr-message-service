@@ -2,23 +2,18 @@ package com.ascent.hr.ascenthrmessageservice.rest;
 
 import com.ascent.hr.ascenthrmessageservice.fixture.MessageQueueFixture;
 import com.ascent.hr.ascenthrmessageservice.model.DeliveryStatus;
+import com.ascent.hr.ascenthrmessageservice.model.Message;
 import com.ascent.hr.ascenthrmessageservice.model.MessageQueue;
+import com.ascent.hr.ascenthrmessageservice.repository.MessageQueueRepository;
 import com.ascent.hr.ascenthrmessageservice.service.IMessageQueueService;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import io.restassured.RestAssured;
-import io.restassured.specification.RequestSpecification;
-import lombok.Setter;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -27,21 +22,11 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.when;
-import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
-import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
 
@@ -52,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 
 @RunWith(SpringRunner.class)
-@WebMvcTest
+@WebMvcTest(MessageQueueController.class)
 public class MessageQueueControllerTest {
 
     @Autowired
@@ -61,28 +46,93 @@ public class MessageQueueControllerTest {
     @MockBean
     private IMessageQueueService iMessageQueueService;
 
+    @MockBean
+    private MessageQueueRepository mockMessageQueueRepository;
+
     @Autowired
     private ObjectMapper objectMapper;
 
     @Test
-    public void enqueMessageToNewMessageQueue()throws Exception{
+    public void createMessageQueueTest() throws Exception{
+        MessageQueue onlyQueue = MessageQueueFixture.firstQueue();
+
+        when(iMessageQueueService.createQueue(anyString())).thenReturn(onlyQueue);
+
+        RequestBuilder requestBuilder = MockMvcRequestBuilders
+                .post("/messages/queues")
+                .accept(MediaType.APPLICATION_JSON)
+                .param("queueName", onlyQueue.getName())
+                .contentType(MediaType.APPLICATION_JSON);
+
+        MvcResult result = mockMvc.perform(requestBuilder).andReturn();
+
+        MockHttpServletResponse response = result.getResponse();
+
+        Assert.assertEquals(200, response.getStatus());
+    }
 
 
-        MessageQueue messageQueue = MessageQueueFixture.firstMessageQueue();
+    @Test
+    public void getMessageQueueTest() throws Exception{
+        MessageQueue messageQueue = MessageQueueFixture.firstQueue();
+        when(mockMessageQueueRepository.findById(messageQueue.getId())).thenReturn(Optional.of(messageQueue));
 
-        when(iMessageQueueService.enQueue(anyString(), anyString(), anyString())).thenReturn(messageQueue);
+        RequestBuilder requestBuilder = MockMvcRequestBuilders
+                .get("/messages/queues/{queueId}",messageQueue.getId())
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON);
 
-        String messageJson = "{\"createdDate\":\"01/09/2019 04:30\",\"retryAttempts\":\"0\", \"deliveryStatus\":\"READY\", \"body\":\"test\"}";
+        MvcResult result = mockMvc.perform(requestBuilder).andReturn();
+
+        MockHttpServletResponse response = result.getResponse();
+
+        Assert.assertEquals(200, response.getStatus());
+        MessageQueue resultMessageQueue = this.objectMapper.readValue(response.getContentAsString(), MessageQueue.class);
+        Assert.assertNotNull(resultMessageQueue);
+        Assert.assertEquals(messageQueue.getId(), resultMessageQueue.getId());
+
+
+    }
+
+
+    @Test
+    public void deleteMessageQueueTest() throws Exception{
+        MessageQueue messageQueue = MessageQueueFixture.firstQueue();
+        when(mockMessageQueueRepository.findById(messageQueue.getId())).thenReturn(Optional.of(messageQueue));
+        when(iMessageQueueService.deleteQueue(any())).thenReturn(true);
 
 
         RequestBuilder requestBuilder = MockMvcRequestBuilders
-                .post("/messages/enqueue")
+                .delete("/messages/queues/{queueId}",messageQueue.getId())
                 .accept(MediaType.APPLICATION_JSON)
-                .param("queueName", messageQueue.getName())
-                .param("exchangeName", messageQueue.getExchangeName())
-                //.param("message", "test")
-                .content(messageJson)
                 .contentType(MediaType.APPLICATION_JSON);
+
+        MvcResult result = mockMvc.perform(requestBuilder).andReturn();
+
+        MockHttpServletResponse response = result.getResponse();
+
+        Assert.assertEquals(200, response.getStatus());
+        String resultResponse = response.getContentAsString();
+        Assert.assertEquals(MessageResourceConstant.MESSAGE_QUEUE_DELETED, resultResponse);
+
+    }
+
+    @Test
+    public void enqueMessageToNewMessageQueue()throws Exception{
+
+        MessageQueue messageQueue = MessageQueueFixture.firstMessageQueue();
+        when(mockMessageQueueRepository.findById(messageQueue.getId())).thenReturn(Optional.of(messageQueue));
+        when(iMessageQueueService.enQueue(any(), anyString())).thenReturn(messageQueue);
+
+        String messageJson = "{\"content\":\"test\"}";
+        this.objectMapper.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+
+        RequestBuilder requestBuilder = MockMvcRequestBuilders
+                .post("/messages/enqueue/{queueId}", messageQueue.getId())
+                .accept(MediaType.APPLICATION_JSON)
+                .content(messageJson)
+                .contentType(MediaType.APPLICATION_JSON_UTF8);
 
         MvcResult result = mockMvc.perform(requestBuilder).andReturn();
 
@@ -94,14 +144,88 @@ public class MessageQueueControllerTest {
         Assert.assertNotNull(resultMessageQueue.getId());
 
         Assert.assertEquals(messageQueue.getName(), resultMessageQueue.getName());
-        Assert.assertEquals(messageQueue.getExchangeName(), resultMessageQueue.getExchangeName());
         Assert.assertEquals(1, resultMessageQueue.getSize());
         Assert.assertEquals(1, resultMessageQueue.getMessages().size());
         Assert.assertEquals("test", resultMessageQueue.getMessages().get(0).getString(resultMessageQueue.getMessages().get(0).getBody()));
         Assert.assertEquals(DeliveryStatus.READY, resultMessageQueue.getMessages().get(0).getDeliveryStatus());
+    }
+
+
+    @Test
+    public void dequeueMessageFromExistingMessageQueue()throws Exception{
+
+        MessageQueue messageQueue = MessageQueueFixture.firstMessageQueue();
+        when(mockMessageQueueRepository.findById(messageQueue.getId())).thenReturn(Optional.of(messageQueue));
+        when(iMessageQueueService.deQueue(any())).thenReturn(messageQueue);
+
+        this.objectMapper.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+        RequestBuilder requestBuilder = MockMvcRequestBuilders
+                .put("/messages/dequeue/{queueId}", messageQueue.getId())
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON_UTF8);
+
+        MvcResult result = mockMvc.perform(requestBuilder).andReturn();
+
+        MockHttpServletResponse response = result.getResponse();
+
+        Assert.assertEquals(200, response.getStatus());
+        MessageQueue resultMessageQueue = objectMapper.readValue(response.getContentAsString(), MessageQueue.class);
+        Assert.assertNotNull(resultMessageQueue);
+        Assert.assertNotNull(resultMessageQueue.getId());
+        Assert.assertEquals(messageQueue.getName(), resultMessageQueue.getName());
 
     }
 
+
+    @Test
+    public void purgeMessagesFromExistingMessageQueue() throws Exception{
+
+        MessageQueue messageQueue = MessageQueueFixture.firstMessageQueue();
+        when(mockMessageQueueRepository.findById(messageQueue.getId())).thenReturn(Optional.of(messageQueue));
+        when(iMessageQueueService.purge(any())).thenReturn(true);
+
+        this.objectMapper.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+        RequestBuilder requestBuilder = MockMvcRequestBuilders
+                .put("/messages/purge/{queueId}", messageQueue.getId())
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON_UTF8);
+
+        MvcResult result = mockMvc.perform(requestBuilder).andReturn();
+
+        MockHttpServletResponse response = result.getResponse();
+
+        Assert.assertEquals(200, response.getStatus());
+        Assert.assertEquals("Messages purged!", response.getContentAsString());
+
+    }
+
+
+    @Test
+    public void peekMessagesFromExistingMessageQueue() throws Exception{
+
+        MessageQueue messageQueue = MessageQueueFixture.firstMessageQueue();
+        when(mockMessageQueueRepository.findById(messageQueue.getId())).thenReturn(Optional.of(messageQueue));
+        when(iMessageQueueService.peek(any(), anyString())).thenReturn(messageQueue.getMessages().get(0));
+
+        this.objectMapper.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+        RequestBuilder requestBuilder = MockMvcRequestBuilders
+                .get("/messages/peek/{queueId}", messageQueue.getId())
+                .param("messageId",messageQueue.getMessages().get(0).getId())
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON_UTF8);
+
+        MvcResult result = mockMvc.perform(requestBuilder).andReturn();
+
+        MockHttpServletResponse response = result.getResponse();
+
+        Message message = this.objectMapper.readValue(response.getContentAsString(), Message.class);
+        Assert.assertEquals(200, response.getStatus());
+        Assert.assertEquals(messageQueue.getMessages().get(0).getId(), message.getId());
+
+    }
 
 
 

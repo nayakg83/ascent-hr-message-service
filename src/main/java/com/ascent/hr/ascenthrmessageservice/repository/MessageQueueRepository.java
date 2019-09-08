@@ -14,5 +14,4 @@ public interface MessageQueueRepository extends JpaRepository<MessageQueue, Stri
 
     MessageQueue findByName(String name);
 
-    MessageQueue findByExchangeName(String name);
 }

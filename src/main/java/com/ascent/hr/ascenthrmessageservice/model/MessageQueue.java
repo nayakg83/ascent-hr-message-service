@@ -6,6 +6,7 @@ import org.hibernate.annotations.CascadeType;
 
 import javax.persistence.*;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,22 +29,15 @@ public class MessageQueue {
 
     private int size;
 
-    @Column(unique = true)
-    private String exchangeName;
-
     @Setter
     @OneToMany(fetch = FetchType.EAGER, orphanRemoval = true)
     @Cascade({CascadeType.ALL, CascadeType.SAVE_UPDATE})
     @JoinTable(name="message_queue_message_mapping", joinColumns = @JoinColumn(name = "message_queue_id"),
             inverseJoinColumns = @JoinColumn(name = "message_id"))
-    private List<Message> messages = new ArrayList<>();
+    private List<Message> messages = new LinkedList<>();
 
     public void name(String name){
         this.name = name;
-    }
-
-    public void exchangeName(String exchangeName){
-        this.exchangeName = exchangeName;
     }
 
     public void size(){

@@ -1,8 +1,8 @@
 package com.ascent.hr.ascenthrmessageservice.rest;
 
 import com.ascent.hr.ascenthrmessageservice.exception.MessageErrorCode;
+import com.ascent.hr.ascenthrmessageservice.exception.MessageErrorConstant;
 import com.ascent.hr.ascenthrmessageservice.exception.MessageException;
-import com.ascent.hr.ascenthrmessageservice.model.Message;
 import com.ascent.hr.ascenthrmessageservice.model.MessageQueue;
 import com.ascent.hr.ascenthrmessageservice.service.IMessageQueueService;
 import com.ascent.hr.ascenthrmessageservice.util.MessageUtil;
@@ -25,6 +25,27 @@ public class MessageQueueController {
     @Autowired
     private IMessageQueueService iMessageQueueService;
 
+    @GetMapping("/queues")
+    public ResponseEntity<?> getMessageQueues(@RequestParam String queueName){
+        if(MessageUtil.isNullOrEmpty(queueName))
+            throw new MessageException(MessageErrorConstant.MESSAGE_QUEUE_NAME_EMPTY, MessageErrorCode.MESSAGE_QUEUE_NAME_EMPTY);
+        MessageQueue messageQueue = iMessageQueueService.getQueue(queueName);
+        return ResponseEntity.ok(messageQueue);
+    }
+
+
+    /**
+     * @Function responsible for getting message queue details
+     * @param queueName
+     * @return MessageQueue
+     */
+    @PostMapping("/queues")
+    public ResponseEntity<?> createMessageQueue(@RequestParam String queueName){
+        if(MessageUtil.isNullOrEmpty(queueName))
+            throw new MessageException(MessageErrorConstant.MESSAGE_QUEUE_NAME_EMPTY, MessageErrorCode.MESSAGE_QUEUE_NAME_EMPTY);
+        MessageQueue messageQueue = iMessageQueueService.createQueue(queueName);
+        return ResponseEntity.ok(messageQueue);
+    }
 
     /**
      * @Function responsible for getting message queue details
@@ -34,7 +55,7 @@ public class MessageQueueController {
     @GetMapping("/queues/{queueId}")
     public ResponseEntity<?> getMessageQueue(@PathVariable(value = "queueId") MessageQueue messageQueue){
         if(messageQueue == null)
-            throw  new MessageException("Message queue does not exist", MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
+            throw  new MessageException(MessageErrorConstant.MESSAGE_QUEUE_NOT_EXIST, MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
         return ResponseEntity.ok(messageQueue);
     }
 
@@ -47,7 +68,7 @@ public class MessageQueueController {
     @PutMapping("/queues/{queueId}")
     public ResponseEntity<?> updateMessageQueue(@PathVariable(value = "queueId") MessageQueue messageQueue, @RequestParam String queueName){
         if(messageQueue == null)
-            throw  new MessageException("Message queue does not exist", MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
+            throw  new MessageException(MessageErrorConstant.MESSAGE_QUEUE_NOT_EXIST, MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
         messageQueue = iMessageQueueService.updateQueueName(messageQueue, queueName);
         return ResponseEntity.ok(messageQueue);
     }
@@ -60,32 +81,28 @@ public class MessageQueueController {
     @DeleteMapping("/queues/{queueId}")
     public ResponseEntity<?> deleteMessageQueue(@PathVariable(value = "queueId") MessageQueue messageQueue){
         if(messageQueue == null)
-            throw  new MessageException("Message queue does not exist", MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
+            throw  new MessageException(MessageErrorConstant.MESSAGE_QUEUE_NOT_EXIST, MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
         boolean isDeleted = iMessageQueueService.deleteQueue(messageQueue);
         if(isDeleted)
-            return ResponseEntity.ok("Message deleted");
+            return ResponseEntity.ok(MessageResourceConstant.MESSAGE_QUEUE_DELETED);
         else
-            throw new MessageException("Issue with message deletion, please try again!", MessageErrorCode.MESSAGE_NOT_DELETED);
+            throw new MessageException(MessageErrorConstant.MESSAGE_NOT_PURGED, MessageErrorCode.MESSAGE_NOT_DELETED);
     }
 
 
     /**
      * @Function responsible for message queue creation along with enqueque message
-     * @param queueName
-     * @param exchangeName
+     * @param messageQueue
      * @param message
      * @return messageQueue
      */
-    @PostMapping(value = "/enqueue")
-    public ResponseEntity<?> enqueueMessage(@RequestParam String queueName, @RequestParam String exchangeName, @RequestBody Message message){
-        if(MessageUtil.isNullOrEmpty(queueName))
-            throw new MessageException("Message queue name is either missing or empty", MessageErrorCode.MESSAGE_QUEUE_NAME_EMPTY);
-        if(MessageUtil.isNullOrEmpty(exchangeName))
-            throw  new MessageException("Message exchange name is either missing or empty", MessageErrorCode.MESSAGE_EXCHANGE_NAME_EMPTY);
+    @PostMapping(value = "/enqueue/{queueId}")
+    public ResponseEntity<?> enqueueMessage(@PathVariable(value = "queueId") MessageQueue messageQueue, @RequestBody Message message){
+        if(MessageUtil.isNullOrEmpty(messageQueue))
+            throw new MessageException(MessageErrorConstant.MESSAGE_QUEUE_NOT_EXIST, MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
         if(MessageUtil.isNullOrEmpty(message))
-            throw  new MessageException("Message details are either missing or empty", MessageErrorCode.MESSAGE_DETAILS_EMPTY);
-
-        MessageQueue messageQueue = iMessageQueueService.enQueue(queueName, exchangeName, message.getString(message.getBody()));
+            throw  new MessageException(MessageErrorConstant.MESSAGE_DETAILS_EMPTY, MessageErrorCode.MESSAGE_DETAILS_EMPTY);
+        messageQueue = iMessageQueueService.enQueue(messageQueue, message.getContent());
         return ResponseEntity.ok(messageQueue);
     }
 
@@ -97,7 +114,7 @@ public class MessageQueueController {
     @PutMapping(value = "/dequeue/{queueId}")
     public ResponseEntity<?> dequeueMessage(@PathVariable(value = "queueId") MessageQueue messageQueue){
         if(messageQueue == null)
-            throw  new MessageException("Message queue does not exist", MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
+            throw  new MessageException(MessageErrorConstant.MESSAGE_QUEUE_NOT_EXIST, MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
         messageQueue = iMessageQueueService.deQueue(messageQueue);
         return ResponseEntity.ok(messageQueue);
     }
@@ -110,13 +127,13 @@ public class MessageQueueController {
     @PutMapping(value = "/purge/{queueId}")
     public ResponseEntity<?> purgeMessages(@PathVariable(value = "queueId") MessageQueue messageQueue){
         if(messageQueue == null)
-            throw  new MessageException("Message queue does not exist", MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
+            throw  new MessageException(MessageErrorConstant.MESSAGE_QUEUE_NOT_EXIST, MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
 
         boolean isPurged = iMessageQueueService.purge(messageQueue);
         if(isPurged)
-            return ResponseEntity.ok("Message purged");
+            return ResponseEntity.ok(MessageResourceConstant.MESSAGE_PURGED);
         else
-            throw new MessageException("Issue while purging message, please try again!", MessageErrorCode.MESSAGE_NOT_PURGED);
+            throw new MessageException(MessageErrorConstant.MESSAGE_NOT_PURGED, MessageErrorCode.MESSAGE_NOT_PURGED);
     }
 
     /**
@@ -126,11 +143,11 @@ public class MessageQueueController {
      * @return
      */
     @GetMapping(value = "/peek/{queueId}")
-    public ResponseEntity<?> peekMessages(@PathVariable(value = "queueId") MessageQueue messageQueue, String messageId){
+    public ResponseEntity<?> peekMessages(@PathVariable(value = "queueId") MessageQueue messageQueue, @RequestParam String messageId){
         if(messageQueue == null)
-            throw  new MessageException("Message queue does not exist", MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
+            throw  new MessageException(MessageErrorConstant.MESSAGE_QUEUE_NOT_EXIST, MessageErrorCode.MESSAGE_QUEUE_NOT_EXIST);
         if(MessageUtil.isNullOrEmpty(messageId))
-            throw  new MessageException("Message id not provided", MessageErrorCode.MESSAGE_ID_NOT_PROVIDED);
+            throw  new MessageException(MessageErrorConstant.MESSAGE_ID_NOT_PROVIDED, MessageErrorCode.MESSAGE_ID_NOT_PROVIDED);
 
         com.ascent.hr.ascenthrmessageservice.model.Message message = iMessageQueueService.peek(messageQueue, messageId);
 
@@ -140,12 +157,12 @@ public class MessageQueueController {
 
 
 
-//    @Data
-//    @AllArgsConstructor
-//    @NoArgsConstructor
-//    public static class Message{
-//        private byte[] body;
-//    }
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class Message{
+        private String content;
+    }
 
 
 }
