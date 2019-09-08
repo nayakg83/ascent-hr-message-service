@@ -102,6 +102,21 @@ Request Body:
 
 
 
+## Database Details:
+This application runs against postgres used as RDBMS. Please use the below command in linux system to run the postgres
+
+Docker command: docker run --name some-postgres -e POSTGRES_PASSWORD=postgres -d -p 5432:5432 postgres
+
+## To create application jar from the source code, run the following command:
+
+mvn package
+
+## Run application jar:
+
+Run application command: java -jar ascent-hr-message-service-0.0.1-SNAPSHOT.jar 
+
+
+
 
 
 
